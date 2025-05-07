@@ -23,7 +23,18 @@ def question_1():
     Return the `Name`, `Surname` and `CustomerID`
     """
 
-    qry = """____________________"""
+    qry = """  
+        -- we use a select distinct so that only one 
+        -- row is returned per duplicated customer id:
+        select distinct name, surname, customerid
+        from customers
+        where customerid in (
+            select customerid
+            from customers
+            group by customerid
+            having count(*) > 1
+        )
+    """
 
     return qry
 
@@ -33,7 +44,14 @@ def question_2():
     Return the `Name`, `Surname` and `Income` of all female customers in the dataset in descending order of income
     """
 
-    qry = """____________________"""
+    qry = """  
+        select name, surname, income
+        from customers
+        where gender = 'Female'
+        -- there may duplicates of customers:
+        qualify row_number() over (partition by customerid order by customerid) = 1 
+        order by income desc
+    """
 
     return qry
 
@@ -45,7 +63,15 @@ def question_3():
     There is only 1 loan per customer ID.
     """
 
-    qry = """____________________"""
+    qry = """
+        -- for the calculation we determine the total approved loans in the numerator 
+        -- and divide this by total loans in the denominator. We use distinct customerids 
+        -- as there should only be 1 loan per customer id
+        select
+            (select count(distinct customerid) from loans where approvalstatus = 'Approved')
+            /count(distinct customerid)
+        from loans
+    """
 
     return qry
 
@@ -56,7 +82,12 @@ def question_4():
     Return columns `CustomerClass` and `Count`
     """
 
-    qry = """____________________"""
+    qry = """
+        -- there are duplicate customerids, we deduplicate using count distinct:
+        select customerclass, count(distinct customerid) as count
+        from credit
+        group by customerclass
+    """
 
     return qry
 
@@ -66,6 +97,10 @@ def question_5():
     Make use of the UPDATE function to amend/fix the following: Customers with a CreditScore between and including 600 to 650 must be classified as CustomerClass C.
     """
 
-    qry = """____________________"""
+    qry = """  
+        update credit
+        set customerclass = 'C'
+        where creditscore between 600 and 650
+    """
 
     return qry

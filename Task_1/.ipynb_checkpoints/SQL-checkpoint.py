@@ -18,73 +18,89 @@ Remember to clean your data.
 
 
 def question_1():
-    # Find the name, surname and customer ids for all the duplicated customer ids in the customers dataset.
-    # Return the `Name`, `Surname` and `CustomerID`
-
-    qry = """____________________"""
-    # deleteing starts here
-    qry = """
-    SELECT Name, Surname, CustomerID
-    FROM CUSTOMERS
-    GROUP BY Name, Surname, CustomerID
-    HAVING COUNT(*) > 1;
+    """
+    Find the name, surname and customer ids for all the duplicated customer ids in the customers dataset.
+    Return the `Name`, `Surname` and `CustomerID`
     """
 
-    # deleteing ends here
+    qry = """  
+        -- we use a select distinct so that only one 
+        -- row is returned per duplicated customer id:
+        select distinct name, surname, customerid
+        from customers
+        where customerid in (
+            select customerid
+            from customers
+            group by customerid
+            having count(*) > 1
+        )
+    """
 
     return qry
 
 
 def question_2():
-    # Return the `Name`, `Surname` and `Income` of all female customers in the dataset in descending order of income
+    """
+    Return the `Name`, `Surname` and `Income` of all female customers in the dataset in descending order of income
+    """
 
-    qry = """____________________"""
-    # deleteing starts here
-    qry = """SELECT Name, Surname, Income
-             FROM (SELECT DISTINCT * FROM customers)
-             WHERE Gender = 'Female'
-             ORDER BY CustomerID, Income DESC;"""
-    # deleteing ends here
+    qry = """  
+        select name, surname, income
+        from customers
+        where gender = 'Female'
+        -- there may duplicates of customers:
+        qualify row_number() over (partition by customerid order by customerid) = 1 
+        order by income desc
+    """
 
     return qry
 
 
 def question_3():
-    # Calculate the percentage of approved loans by LoanTerm, with the result displayed as a percentage out of 100.
-    # ie 50 not 0.5
-    # There is only 1 loan per customer ID.
+    """
+    Calculate the percentage of approved loans by LoanTerm, with the result displayed as a percentage out of 100.
+    ie 50 not 0.5
+    There is only 1 loan per customer ID.
+    """
 
-    qry = """____________________"""
-    # deleteing starts here
-    qry = """SELECT LoanTerm, 
-             (SUM(CASE WHEN ApprovalStatus = 'Approved' THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS ApprovalPercentage,
-             FROM (SELECT DISTINCT * FROM loans)
-             GROUP BY LoanTerm"""
-    # deleteing ends here
+    qry = """
+        -- for the calculation we determine the total approved loans in the numerator 
+        -- and divide this by total loans in the denominator. We use distinct customerids 
+        -- as there should only be 1 loan per customer id
+        select
+            (select count(distinct customerid) from loans where approvalstatus = 'Approved')
+            /count(distinct customerid)
+        from loans
+    """
 
     return qry
 
 
 def question_4():
-    # Return a breakdown of the number of customers per CustomerClass in the credit data
-    # Return columns `CustomerClass` and `Count`
+    """
+    Return a breakdown of the number of customers per CustomerClass in the credit data
+    Return columns `CustomerClass` and `Count`
+    """
 
-    qry = """____________________"""
-    # deleteing starts here
-    qry = """SELECT CustomerClass, COUNT(DISTINCT CustomerID) as Count 
-             FROM (SELECT DISTINCT * FROM credit)
-             GROUP BY CustomerClass"""
-    # deleteing ends here
+    qry = """
+        -- there are duplicate customerids, we deduplicate using count distinct:
+        select customerclass, count(distinct customerid) as count
+        from credit
+        group by customerclass
+    """
 
     return qry
 
 
 def question_5():
-    # Make use of the UPDATE function to amend/fix the following: Customers with a CreditScore between and including 600 to 650 must be classified as CustomerClass C.
+    """
+    Make use of the UPDATE function to amend/fix the following: Customers with a CreditScore between and including 600 to 650 must be classified as CustomerClass C.
+    """
 
-    qry = """____________________"""
-    # deleteing starts here
-    qry = """UPDATE credit SET CustomerClass = 'C' WHERE CreditScore BETWEEN 600 AND 650;"""
-    # deleteing ends here
+    qry = """  
+        update credit
+        set customerclass = 'C'
+        where creditscore between 600 and 650
+    """
 
     return qry

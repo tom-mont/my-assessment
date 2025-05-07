@@ -22,7 +22,28 @@ def question_1():
     Make use of a JOIN to find the `AverageIncome` per `CustomerClass`
     """
 
-    qry = """____________________"""
+    qry = """  
+        -- we first need to dedupe the data as both tables contain 
+        -- duplicate customer ids
+        with customers_deduped as (
+            select *
+            from customers
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        -- credit table also contains customerid duplicates and needs to be deduped
+        credit_deduped as (
+            select *
+            from credit
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        )
+        select 
+            credit_deduped.customerclass
+            ,avg(customers_deduped.income) as averageincome
+        from customers_deduped
+        left join credit_deduped
+            on customers_deduped.customerid = credit_deduped.customerid
+        group by credit_deduped.customerclass
+    """
 
     return qry
 
@@ -33,7 +54,42 @@ def question_2():
     Ensure consistent use of either the abbreviated or full version of each province, matching the format found in the customer table.
     """
 
-    qry = """____________________"""
+    qry = """  
+        -- we first need to dedupe the data as both tables contain 
+        -- duplicate customer ids. Here we will also ensure consistent
+        -- naming of the provinces
+        with customers_deduped as (
+            select 
+                *
+                ,case when region in ('NC', 'NorthernCape') then 'NorthernCape'
+                    when region in ('EC', 'EasternCape') then 'EasternCape'
+                    when region in ('WC', 'WesternCape') then 'WesternCape'
+                    when region in ('FS', 'FreeState') then 'FreeState'
+                    when region in ('GT', 'Gauteng') then 'Gauteng'
+                    when region in ('LP', 'Limpopo') then 'Limpopo'
+                    when region in ('NW', 'NorthWest') then 'NorthWest'
+                    when region in ('KZN', 'KwaZulu-Natal') then 'KwaZulu-Natal'
+                    when region in ('MP', 'Mpumalanga') then 'KwaZulu-Natal'
+                    end
+                as province
+            from customers
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        -- there are duplicate customer IDs in the loan table:
+        rejected_loans_deduped as (
+            select *
+            from loans
+            where approvalstatus = 'Rejected'
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        )
+        select 
+            customers_deduped.province as Province
+            ,count(*) as RejectedApplications
+        from customers_deduped
+        left join rejected_loans_deduped
+            on customers_deduped.customerid = rejected_loans_deduped.customerid
+        group by customers_deduped.province
+    """
 
     return qry
 
