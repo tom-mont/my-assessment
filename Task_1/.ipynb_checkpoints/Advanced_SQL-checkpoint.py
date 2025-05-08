@@ -120,7 +120,58 @@ def question_4():
     Hint: there should be 12x CustomerID = 1.
     """
 
-    qry = """____________________"""
+    qry = """
+        create or replace table timeline (
+            CustomerID INT
+            ,MonthName varchar(100)
+            ,NumberOfRepayments INT
+            ,AmountTotal INT
+        );
+
+        insert into timeline (CustomerID, MonthName, NumberOfRepayments, AmountTotal)
+        with customers_deduped as (
+            select *
+            from customers
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        -- Below 
+        repayments_london_conversion as (
+            select
+                customerid
+                ,repaymentdate at time zone timezone at time zone 'Europe/London' as london_time
+                ,extract(hour from london_time) as london_hour
+                ,extract(month from london_time) as london_month
+                ,amount
+            from repayments
+            where london_hour between 6 and 17
+        ),
+        repayments_per_month as (
+            select 
+                customerid
+                ,london_month
+                ,count(*) as numberofrepayments
+                ,sum(amount) as amounttotal
+            from repayments_london_conversion
+            group by customerid, london_month
+        ),
+        customer_months as (
+            select 
+                customers_deduped.customerid
+                ,months.monthname
+                ,months.monthid
+            from customers_deduped
+            cross join months
+        )
+        select 
+            customer_months.customerid
+            ,customer_months.monthname as MonthName
+            ,repayments_per_month.numberofrepayments as NumberOfRepayments
+            ,repayments_per_month.amounttotal as AmountTotal
+        from customer_months
+        left join repayments_per_month
+            on customer_months.monthid = repayments_per_month.london_month
+            and customer_months.customerid = repayments_per_month.customerid
+    """
 
     return qry
 
@@ -134,7 +185,60 @@ def question_5():
     Hint: there should be 1x CustomerID = 1
     """
 
-    qry = """____________________"""
+    qry = """
+        select
+            CustomerId
+            ,cast(sum(case when monthname = 'January' then numberofrepayments else 0 end) as int)
+            as JanuaryRepayments
+            ,cast(sum(case when monthname = 'January' then amounttotal else 0 end) as int)
+            as JanuaryTotal
+            ,cast(sum(case when monthname = 'February' then numberofrepayments else 0 end) as int)
+            as FebruaryRepayments
+            ,cast(sum(case when monthname = 'February' then amounttotal else 0 end) as int)
+            as FebruaryTotal
+            ,cast(sum(case when monthname = 'March' then numberofrepayments else 0 end) as int)
+            as MarchRepayments
+            ,cast(sum(case when monthname = 'March' then amounttotal else 0 end) as int)
+            as MarchTotal
+            ,cast(sum(case when monthname = 'April' then numberofrepayments else 0 end) as int)
+            as AprilRepayments
+            ,cast(sum(case when monthname = 'April' then amounttotal else 0 end) as int)
+            as AprilTotal
+            ,cast(sum(case when monthname = 'May' then numberofrepayments else 0 end) as int)
+            as MayRepayments
+            ,cast(sum(case when monthname = 'May' then amounttotal else 0 end) as int)
+            as MayTotal
+            ,cast(sum(case when monthname = 'June' then numberofrepayments else 0 end) as int)
+            as JuneRepayments
+            ,cast(sum(case when monthname = 'June' then amounttotal else 0 end) as int)
+            as JuneTotal
+            ,cast(sum(case when monthname = 'July' then numberofrepayments else 0 end) as int)
+            as JulyRepayments
+            ,cast(sum(case when monthname = 'July' then amounttotal else 0 end) as int)
+            as JulyTotal
+            ,cast(sum(case when monthname = 'August' then numberofrepayments else 0 end) as int)
+            as AugustRepayments
+            ,cast(sum(case when monthname = 'August' then amounttotal else 0 end) as int)
+            as AugustTotal
+            ,cast(sum(case when monthname = 'September' then numberofrepayments else 0 end) as int)
+            as SeptemberRepayments
+            ,cast(sum(case when monthname = 'September' then amounttotal else 0 end) as int)
+            as SeptemberTotal
+            ,cast(sum(case when monthname = 'October' then numberofrepayments else 0 end) as int)
+            as OctoberRepayments
+            ,cast(sum(case when monthname = 'October' then amounttotal else 0 end) as int)
+            as OctoberTotal
+            ,cast(sum(case when monthname = 'November' then numberofrepayments else 0 end) as int)
+            as NovemberRepayments
+            ,cast(sum(case when monthname = 'November' then amounttotal else 0 end) as int)
+            as NovemberTotal
+            ,cast(sum(case when monthname = 'December' then numberofrepayments else 0 end) as int)
+            as DecemberRepayments
+            ,cast(sum(case when monthname = 'December' then amounttotal else 0 end) as int)
+            as DecemberTotal
+        from timeline
+        group by customerid
+    """
 
     return qry
 
@@ -155,7 +259,40 @@ def question_6():
     Also return a result set for this table (ie SELECT * FROM corrected_customers)
     """
 
-    qry = """____________________"""
+    qry = """
+        create or replace table corrected_customers as
+        -- Note: we continue to assume that it is correct to deduplicate the table:
+        with customers_deduped as (
+            select *
+            from customers
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        corrected_customers as ( 
+            select
+                customerid as CustomerId
+                ,age as Age
+                ,gender as Gender
+                -- Manual input for overflowing customers:
+                ,case 
+                -- first two female customers:
+                    when customerid = 1 then 52
+                    when customerid = 2 then 71
+                -- first two male customers:
+                    when customerid = 7 then 39
+                    when customerid = 8 then 51
+            -- Function will assign the age of two customers "above" the customer:
+                    else lag(age, 2) 
+                        over (partition by gender order by customerid asc) end
+                as CorrectedAge
+            from customers_deduped
+        )
+        select *
+        from corrected_customers
+        ;
+
+        select *
+        from corrected_customers
+    """
 
     return qry
 
@@ -176,6 +313,16 @@ def question_7():
     Return columns: `CustomerID`, `Age`, `CorrectedAge`, `Gender`, `AgeCategory`, `Rank`
     """
 
-    qry = """____________________"""
+    qry = """
+        select 
+            *
+            ,case 
+                when CorrectedAge < 20 then 'Teen'
+                when (20 <= CorrectedAge) and (CorrectedAge < 30) then 'Young Adult'
+                when (30 <= CorrectedAge) and (CorrectedAge  < 60) then 'Adult'
+                else 'Pensioner' end
+            as AgeCategory
+        from corrected_customers
+    """
 
     return qry
