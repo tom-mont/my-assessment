@@ -37,8 +37,8 @@ def question_1():
             qualify row_number() over (partition by customerid order by customerid) = 1
         )
         select 
-            credit_deduped.customerclass
-            ,avg(customers_deduped.income) as averageincome
+            credit_deduped.CustomerClass
+            ,avg(customers_deduped.income) as AverageIncome
         from customers_deduped
         left join credit_deduped
             on customers_deduped.customerid = credit_deduped.customerid
@@ -61,6 +61,7 @@ def question_2():
         with customers_deduped as (
             select 
                 *
+                -- Ensure province naming is consistent:
                 ,case when region in ('NC', 'NorthernCape') then 'NorthernCape'
                     when region in ('EC', 'EasternCape') then 'EasternCape'
                     when region in ('WC', 'WesternCape') then 'WesternCape'
@@ -75,7 +76,7 @@ def question_2():
             from customers
             qualify row_number() over (partition by customerid order by customerid) = 1
         ),
-        -- there are duplicate customer IDs in the loan table:
+        -- there are duplicate customer IDs in the loan table, hence need to be deduped:
         rejected_loans_deduped as (
             select *
             from loans
@@ -102,7 +103,56 @@ def question_3():
     Do not return the new table, just create it.
     """
 
-    qry = """____________________"""
+    qry = """
+        create or replace table financing (
+            CustomerID INT
+            ,Income INT
+            ,LoanAmount INT
+            ,LoanTerm INT
+            ,InterestRate FLOAT
+            ,ApprovalStatus VARCHAR(100)
+            ,CreditScore INT
+        );
+
+        insert into financing (
+            CustomerID
+            ,Income
+            ,LoanAmount
+            ,LoanTerm
+            ,InterestRate
+            ,ApprovalStatus
+            ,CreditScore
+        )
+        with customers_deduped as (
+            select *
+            from customers
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        loans_deduped as (
+            select *
+            from loans
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        ),
+        -- credit table also contains customerid duplicates and needs to be deduped
+        credit_deduped as (
+            select *
+            from credit
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        )
+        select 
+            customers_deduped.customerid as CustomerID
+            ,customers_deduped.income as Income
+            ,loans_deduped.loanamount as LoanAmount
+            ,loans_deduped.loanterm as LoanTerm
+            ,loans_deduped.interestrate as InterestRate
+            ,loans_deduped.approvalstatus as ApprovalStatus
+            ,credit_deduped.creditscore as CreditScore
+        from customers_deduped
+        left join loans_deduped
+            on customers_deduped.customerid = loans_deduped.customerid
+        left join credit_deduped
+            on customers_deduped.customerid = credit_deduped.customerid
+    """
 
     return qry
 
@@ -165,12 +215,20 @@ def question_4():
         select 
             customer_months.customerid
             ,customer_months.monthname as MonthName
-            ,repayments_per_month.numberofrepayments as NumberOfRepayments
-            ,repayments_per_month.amounttotal as AmountTotal
+        -- If a customer does not make a repayment the repayments_per_month will fail to join 
+        -- and the value for NumberOfRepayments and AmountTotal will be null. We coalesce this 
+        -- to 0 to demonstrate a payment has not been made:
+            ,coalesce(repayments_per_month.numberofrepayments, 0) as NumberOfRepayments
+            ,coalesce(repayments_per_month.amounttotal, 0) as AmountTotal
         from customer_months
         left join repayments_per_month
             on customer_months.monthid = repayments_per_month.london_month
             and customer_months.customerid = repayments_per_month.customerid
+        ;
+
+        select *
+        from timeline
+        order by customerid
     """
 
     return qry
