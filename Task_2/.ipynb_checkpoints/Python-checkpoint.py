@@ -172,20 +172,28 @@ def question_3(df_balances):
         float: The anualized CPR of the loan portfolio as a percent.
 
     """
-
-    ## We want to calculate unscheduled prinicpal first. This is the amount of the loan payment that goes towards the principal
-    ## The scheduled prinicpal would be scheduled repayment less the interest payment
-    df_balances["UnscheduledPrincipal"] = df_balances["ScheduledRepayment"] - df_balances["InterestPayment"]
+    
+    ## Aggregate portfolio by taking the sums of relevant columns per-month
+    portfolio_months = df_balances.groupby("Month").agg({
+        "ActualRepayment": "sum",
+        "ScheduledRepayment": "sum",
+        "LoanBalanceStart": "sum"
+    })
+    
+    ## Unscheduled principal will be any payment towards the principal over what is expected
+    ## This will be any payment over and above the expected payment.
+    portfolio_months["UnscheduledPrincipal"] = portfolio_months["ActualRepayment"] - portfolio_months["ScheduledRepayment"]
+    ## UnscheduledPrincipal cannot be less than zero:
+    portfolio_months.loc[portfolio_months["UnscheduledPrincipal"] < 0, "UnscheduledPrincipal"] = 0
     
     ## SMM is calculated as: (Unscheduled Principal)/(Start of Month Loan Balance)
-    df_balances["SMM"] = df_balances["UnscheduledPrincipal"] / df_balances["LoanBalanceStart"]
+    portfolio_months["SMM"] = portfolio_months["UnscheduledPrincipal"] / portfolio_months["LoanBalanceStart"]
     
     ## SMM_mean is calculated as (∏(1+SMM))^(1/12) - 1
-    SMM_mean = (df_balances["SMM"] ** (1/12)).prod() -1
-    print(SMM_mean)
+    SMM_mean = (1 + portfolio_months["SMM"]).prod() ** (1/12) - 1
     
     ## CPR is calcualted as: 1 - (1- SMM_mean)^12
-    cpr_percent = 1 - (1 - SMM_mean) ** 12
+    cpr_percent = 100 * (1 - (1 - SMM_mean) ** 12)
 
     return cpr_percent
 
