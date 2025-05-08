@@ -134,23 +134,26 @@ def question_2(df_scheduled, df_balances):
 
     """
 
-    repayments_per_loan = df_balances.groupby("LoanID").size()
-
+    ## Check all scheduled payments for each loan 
+    repayments_per_loan = df_scheduled.groupby("LoanID").size()
+    
     ## Unpaid payments are defined a payment being 0
     unpaid_payments = df_balances[df_balances["ActualRepayment"] == 0].groupby("LoanID").size()
-    calc = pd.DataFrame({
+
+    ## Create a new DF that is on a loan-grain
+    loans_df = pd.DataFrame({
         'TotalExpectedRepayments': repayments_per_loan,
         'UnpaidPayments': unpaid_payments
     })
     
-    ## Set NaN values to 0 for calculcation purposes:
-    calc['UnpaidPayments'] = calc['UnpaidPayments'].fillna(0).astype(int)
+    ## Update NaN values to 0 for calculcation purposes:
+    loans_df['UnpaidPayments'] = loans_df['UnpaidPayments'].fillna(0).astype(int)
     
     ## Calculate percentage of payments in a loan that were not repaid:
-    calc["PercentUnpaidPayments"] = 100 * calc["UnpaidPayments"] / calc["TotalExpectedRepayments"]
+    loans_df["PercentUnpaidPayments"] = 100 * loans_df["UnpaidPayments"] / loans_df["TotalExpectedRepayments"]
     
     ## Calculate what % of loans are in type 2 default:
-    default_rate_percent = 100 * len(calc[calc["PercentUnpaidPayments"] > 15]) / len(df_balances)
+    default_rate_percent = 100 * len(loans_df[loans_df["PercentUnpaidPayments"] > 15]) / len(loans_df)
     
     return default_rate_percent
 
@@ -210,8 +213,8 @@ def question_4(df_balances):
     ## Recovery rate is given to be 0.8
     recovery_rate = 0.8
     
-    ## Probabiltiy of default is taken from question 2
-    probability_of_default = 0.1
+    ## Probabiltiy of default is taken from both questions 1 and 2 
+    probability_of_default = 0.15
     
     ## Predicted total loss: probability_of_default * total_loan_balance * (1 - recovery_rate)
     total_loss = probability_of_default * yearend_loan_balance * (1 - recovery_rate)
