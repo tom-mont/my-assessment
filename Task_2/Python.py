@@ -93,7 +93,8 @@ df_balances = calculate_df_balances(df_scheduled, df_actual)
 
 def question_1(df_balances):
     """
-    Calculate the percent of loans that defaulted as per the type 1 default definition.
+    Calculates the percent of loans that defaulted as per the type 1 default definition. 
+    A type 1 default occurs on a loan when any scheduled monthly repayment is not met in full.
 
     Args:
         df_balances (DataFrame): Dataframe created from the 'calculate_df_balances()' function
@@ -102,6 +103,18 @@ def question_1(df_balances):
         float: The percentage of type 1 defaulted loans (ie 50.0 not 0.5)
 
     """
+
+    # First, find all loan payments that were less than the scheduled payment
+    actual_less_than_scheduled = df_balances[df_balances['ActualRepayment'] < df_balances['ScheduledRepayment']]
+
+    # By the type 1 default definition any payments less than the scheduled payment meet the definition
+    count_distinct_loans_type1default = actual_less_than_scheduled['LoanID'].nunique()
+    
+    count_distinct_loans = df_balances['LoanID'].nunique()
+
+    # Hence type 1 default rate is the proportion that met the type 1 definition. Multiplied by 100 to 
+    # make it a number
+    default_rate_percent = 100 * count_distinct_loans_type1default / count_distinct_loans
 
     return default_rate_percent
 
