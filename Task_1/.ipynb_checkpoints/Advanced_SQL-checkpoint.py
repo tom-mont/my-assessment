@@ -314,6 +314,7 @@ def question_7():
     """
 
     qry = """
+        with age_category_customers as (
         select 
             *
             ,case 
@@ -323,6 +324,32 @@ def question_7():
                 else 'Pensioner' end
             as AgeCategory
         from corrected_customers
+        ),
+        repayments_per_customer as (
+            select
+                customerid
+                ,coalesce(count(*), 0) 
+                as repayment_count
+            from repayments
+            group by customerid
+        )
+        select 
+            age_category_customers.CustomerID
+            ,age_category_customers.Age
+            ,age_category_customers.CorrectedAge
+            ,age_category_customers.Gender
+            ,age_category_customers.AgeCategory
+        -- dense_rank ensures that customers with an equal repayment_count are given 
+        -- the same rank and rankings are not skipped
+            ,case when repayments_per_customer.repayment_count is NULL 
+                    or repayments_per_customer.repayment_count = 0 then 0 
+                else dense_rank() 
+                    over (partition by AgeCategory order by repayments_per_customer.repayment_count desc)
+                    end
+            as Rank
+        from age_category_customers
+        left join repayments_per_customer
+            on age_category_customers.customerid = repayments_per_customer.customerid
     """
 
     return qry
