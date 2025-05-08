@@ -28,12 +28,14 @@ def question_1():
         -- row is returned per duplicated customer id:
         select distinct name, surname, customerid
         from customers
-        where customerid in (
+        where customerid in 
+            -- subquery to identify duplicates:
+            (
             select customerid
             from customers
             group by customerid
             having count(*) > 1
-        )
+            )
     """
 
     return qry
@@ -45,11 +47,10 @@ def question_2():
     """
 
     qry = """  
-        select name, surname, income
+    -- We know there are duplicates in this table, hence we use a select distinct
+        select distinct name, surname, income
         from customers
         where gender = 'Female'
-        -- there may duplicates of customers:
-        qualify row_number() over (partition by customerid order by customerid) = 1 
         order by income desc
     """
 
@@ -100,6 +101,7 @@ def question_5():
     qry = """  
         update credit
         set customerclass = 'C'
+        -- "between" is inclusive of both the lower and upper bounds:
         where creditscore between 600 and 650
     """
 
