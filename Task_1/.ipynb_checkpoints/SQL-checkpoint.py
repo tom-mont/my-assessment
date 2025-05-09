@@ -65,13 +65,20 @@ def question_3():
     """
 
     qry = """
-        -- for the calculation we determine the total approved loans in the numerator 
-        -- and divide this by total loans in the denominator. We use distinct customerids 
-        -- as there should only be 1 loan per customer id
+        -- We know there is duplicate data in the customers table, so first a CTE to deduplicate:
+        with loans_deduped as (
+            select *
+            from loans
+            qualify row_number() over (partition by customerid order by customerid) = 1
+        )
         select
-            (select count(distinct customerid) from loans where approvalstatus = 'Approved')
-            /count(distinct customerid)
-        from loans
+            LoanTerm
+        -- To determine the proportion of approved loans we will count all approved and divide
+        -- by total loans
+            ,100 * sum(case when ApprovalStatus = 'Approved' then 1 else 0 end) / count(*)
+            as ApprovalPercentage
+        from loans_deduped
+        group by loanterm
     """
 
     return qry
