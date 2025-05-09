@@ -108,9 +108,10 @@ def question_1(df_balances):
     actual_less_than_scheduled = df_balances[df_balances['ActualRepayment'] < df_balances['ScheduledRepayment']]
 
     # By the type 1 default definition any payments less than the scheduled payment meet the definition
+    ## nununique() selects distinct loans
     count_distinct_loans_type1default = actual_less_than_scheduled['LoanID'].nunique()
 
-    ## nununique() selects distinct loans
+    ## nununique() selects all distinct loans:
     count_distinct_loans = df_balances['LoanID'].nunique()
 
     # Hence type 1 default rate is the proportion that met the type 1 definition. Multiplied by 100 to 
@@ -134,10 +135,10 @@ def question_2(df_scheduled, df_balances):
 
     """
 
-    ## Check all scheduled payments for each loan 
+    ## Number of scheduled payments for each loan 
     repayments_per_loan = df_scheduled.groupby("LoanID").size()
     
-    ## Unpaid payments are defined a payment being 0
+    ## Unpaid payments are defined as a payment being 0
     unpaid_payments = df_balances[df_balances["ActualRepayment"] == 0].groupby("LoanID").size()
 
     ## Create a new DF that is on a loan-grain
@@ -180,9 +181,9 @@ def question_3(df_balances):
         "LoanBalanceStart": "sum"
     })
     
-    ## Unscheduled principal will be any payment towards the principal over what is expected
-    ## This will be any payment over and above the expected payment.
+    ## Unscheduled principal will be any payment that exceeds the expected payment 
     portfolio_months["UnscheduledPrincipal"] = portfolio_months["ActualRepayment"] - portfolio_months["ScheduledRepayment"]
+    
     ## UnscheduledPrincipal cannot be less than zero:
     portfolio_months.loc[portfolio_months["UnscheduledPrincipal"] < 0, "UnscheduledPrincipal"] = 0
     
@@ -192,7 +193,7 @@ def question_3(df_balances):
     ## SMM_mean is calculated as (∏(1+SMM))^(1/12) - 1
     SMM_mean = (1 + portfolio_months["SMM"]).prod() ** (1/12) - 1
     
-    ## CPR is calcualted as: 1 - (1- SMM_mean)^12
+    ## CPR is calculated as: 1 - (1- SMM_mean)^12
     cpr_percent = 100 * (1 - (1 - SMM_mean) ** 12)
 
     return cpr_percent
