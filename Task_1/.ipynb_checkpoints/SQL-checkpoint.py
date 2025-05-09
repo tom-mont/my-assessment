@@ -65,7 +65,7 @@ def question_3():
     """
 
     qry = """
-        -- We know there is duplicate data in the customers table, so first a CTE to deduplicate:
+        -- There should only be one loan per customerid in the loans table:
         with loans_deduped as (
             select *
             from loans
