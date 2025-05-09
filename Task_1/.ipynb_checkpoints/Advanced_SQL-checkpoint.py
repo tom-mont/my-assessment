@@ -39,8 +39,8 @@ def question_1():
         select 
             credit_deduped.CustomerClass
             ,avg(customers_deduped.income) as AverageIncome
-        from customers_deduped
-        left join credit_deduped
+        from credit_deduped
+        left join customers_deduped
             on customers_deduped.customerid = credit_deduped.customerid
         group by credit_deduped.customerclass
     """
@@ -74,13 +74,14 @@ def question_2():
                     end
                 as province
             from customers
+        -- Deduplication of customers:
             qualify row_number() over (partition by customerid order by customerid) = 1
         ),
-        -- there are duplicate customer IDs in the loan table, hence need to be deduped:
         rejected_loans_deduped as (
             select *
             from loans
             where approvalstatus = 'Rejected'
+        -- there are duplicate customer IDs in the loan table, hence need to be deduped:
             qualify row_number() over (partition by customerid order by customerid) = 1
         )
         select 
@@ -193,6 +194,7 @@ def question_4():
                 ,extract(month from london_time) as london_month
                 ,amount
             from repayments
+        -- Repayments should only occur between 6am and 6pm London Time:
             where london_hour between 6 and 17
         ),
         repayments_per_month as (
@@ -217,18 +219,13 @@ def question_4():
             ,customer_months.monthname as MonthName
         -- If a customer does not make a repayment the repayments_per_month will fail to join 
         -- and the value for NumberOfRepayments and AmountTotal will be null. We coalesce this 
-        -- to 0 to demonstrate a payment has not been made:
+        -- to 0 to represent that a payment has not been made:
             ,coalesce(repayments_per_month.numberofrepayments, 0) as NumberOfRepayments
             ,coalesce(repayments_per_month.amounttotal, 0) as AmountTotal
         from customer_months
         left join repayments_per_month
             on customer_months.monthid = repayments_per_month.london_month
             and customer_months.customerid = repayments_per_month.customerid
-        ;
-
-        select *
-        from timeline
-        order by customerid
     """
 
     return qry
